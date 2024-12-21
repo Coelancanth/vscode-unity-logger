@@ -4,9 +4,10 @@ const WebSocket = require('ws');
 // 创建TCP服务器（接收Unity日志）
 const tcpServer = net.createServer();
 const port = 3000;
+const wsPort = 3001;
 
 // 创建WebSocket服务器（转发到VSCode）
-const wss = new WebSocket.Server({ port: 3001 });
+const wss = new WebSocket.Server({ port: wsPort });
 
 let vscodeConnection = null;
 
@@ -52,5 +53,7 @@ tcpServer.on('connection', (socket) => {
 });
 
 tcpServer.listen(port, () => {
-    console.log(`Server listening on port ${port}`);
+    console.log(`TCP Server listening on port ${port}`);
+    console.log(`WebSocket Server listening on port ${wsPort}`);
+    console.log('SERVER_READY');
 }); 
