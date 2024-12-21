@@ -1,5 +1,2 @@
-- [ ] 问题：
-    - 目前只能打印一个变量，如果多选，只会打印列表中第一个变量
-    - 并且这个变量只能在选择后，通过`Log Selected Variables`按钮打印
-    - 能不能将所有选择的变量，以分组的形式统一打印出来？
-    - 能不能在按下`Refresh Variables`按钮后，根据变量的作用域，将它们分组？
+    - 默认不显示Unity自带的那些那些属性，比如`position`, `gameObject`等（`Properties` 默认为"collapsed"）
+    - `logger`的主要目的是为了查看自定义的字段和属性，现在这些不能全部显示（private field）

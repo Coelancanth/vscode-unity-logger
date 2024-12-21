@@ -14,7 +14,17 @@ namespace UnityLogger
 
         public void LogValues(Dictionary<string, object> values)
         {
-            if (values == null || values.Count == 0)
+            // Convert to grouped format and call the grouped version
+            var grouped = new Dictionary<string, Dictionary<string, object>>
+            {
+                { "Variables", values }
+            };
+            LogValues(grouped);
+        }
+
+        public void LogValues(Dictionary<string, Dictionary<string, object>> groupedValues)
+        {
+            if (groupedValues == null || groupedValues.Count == 0 || groupedValues.All(g => g.Value.Count == 0))
             {
                 Debug.Log("No values to log");
                 return;
@@ -23,17 +33,24 @@ namespace UnityLogger
             var builder = new StringBuilder();
             builder.AppendLine("=== Variable Log ===");
 
-            // Group values by their type for better organization
-            var groupedValues = values
-                .GroupBy(kv => DetermineValueType(kv.Value))
-                .OrderBy(g => g.Key);
-
-            foreach (var group in groupedValues)
+            foreach (var group in groupedValues.OrderBy(g => g.Key))
             {
-                builder.AppendLine($"\n--- {group.Key} ---");
-                foreach (var kvp in group.OrderBy(kv => kv.Key))
+                if (group.Value.Count == 0) continue;
+
+                builder.AppendLine($"\n=== {group.Key} ===");
+                
+                // Sub-group by value type within each named group
+                var subGroups = group.Value
+                    .GroupBy(kv => DetermineValueType(kv.Value))
+                    .OrderBy(g => g.Key);
+
+                foreach (var subGroup in subGroups)
                 {
-                    builder.AppendLine(string.Format(format, kvp.Key, FormatValue(kvp.Value)));
+                    builder.AppendLine($"--- {subGroup.Key} ---");
+                    foreach (var kvp in subGroup.OrderBy(kv => kv.Key))
+                    {
+                        builder.AppendLine(string.Format(format, kvp.Key, FormatValue(kvp.Value)));
+                    }
                 }
             }
 

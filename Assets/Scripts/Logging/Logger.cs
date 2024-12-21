@@ -23,6 +23,7 @@ namespace UnityLogger
         private IVariableGroup variableGroup;
         private Dictionary<string, object> capturedValues;
         private List<VariableGroup> groups = new List<VariableGroup>();
+        private Dictionary<string, string> variableToGroupMap = new Dictionary<string, string>();
 
         private void Awake()
         {
@@ -41,6 +42,15 @@ namespace UnityLogger
         }
 
         /// <summary>
+        /// Gets all available components from the target component's GameObject
+        /// </summary>
+        public Component[] GetAvailableComponents()
+        {
+            if (targetComponent == null) return new Component[0];
+            return targetComponent.gameObject.GetComponents<Component>();
+        }
+
+        /// <summary>
         /// Captures and groups all available variables from the target component
         /// </summary>
         public List<VariableGroup> CaptureAvailableVariables()
@@ -49,6 +59,17 @@ namespace UnityLogger
             
             var variables = variableCapture.GetAvailableVariables(targetComponent);
             groups = variableGroup.GroupVariables(variables, targetComponent.GetType());
+            
+            // Update variable to group mapping
+            variableToGroupMap.Clear();
+            foreach (var group in groups)
+            {
+                foreach (var variable in group.Variables)
+                {
+                    variableToGroupMap[variable] = group.Name;
+                }
+            }
+            
             return groups;
         }
 
@@ -63,7 +84,22 @@ namespace UnityLogger
                 .Where(kv => selectedVariables.Contains(kv.Key))
                 .ToDictionary(kv => kv.Key, kv => kv.Value);
 
-            logger.LogValues(capturedValues);
+            // Pass the group information to the logger
+            var valueGroups = new Dictionary<string, Dictionary<string, object>>();
+            foreach (var kvp in capturedValues)
+            {
+                string groupName = variableToGroupMap.ContainsKey(kvp.Key) 
+                    ? variableToGroupMap[kvp.Key] 
+                    : "Other";
+
+                if (!valueGroups.ContainsKey(groupName))
+                {
+                    valueGroups[groupName] = new Dictionary<string, object>();
+                }
+                valueGroups[groupName][kvp.Key] = kvp.Value;
+            }
+
+            logger.LogValues(valueGroups);
         }
 
         /// <summary>

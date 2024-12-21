@@ -12,10 +12,15 @@ namespace UnityLogger
         private List<VariableGroup> variableGroups = new List<VariableGroup>();
         private Dictionary<string, bool> variableSelections = new Dictionary<string, bool>();
         private bool showVariables = true;
+        private int selectedComponentIndex = 0;
+        private Component[] availableComponents;
+        private string[] componentNames;
+        private Dictionary<string, bool> groupExpandStates = new Dictionary<string, bool>();
 
         private void OnEnable()
         {
             logger = (Logger)target;
+            RefreshComponentList();
             RefreshVariableList();
         }
 
@@ -23,15 +28,38 @@ namespace UnityLogger
         {
             EditorGUI.BeginChangeCheck();
 
-            // Draw default fields
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("targetComponent"));
+            // Component selection dropdown
+            if (availableComponents != null && availableComponents.Length > 0)
+            {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.PrefixLabel("Target Component");
+                int newIndex = EditorGUILayout.Popup(selectedComponentIndex, componentNames);
+                if (newIndex != selectedComponentIndex)
+                {
+                    selectedComponentIndex = newIndex;
+                    logger.SetTargetComponent(availableComponents[selectedComponentIndex]);
+                    RefreshVariableList();
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+            else
+            {
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("targetComponent"));
+            }
+
             EditorGUILayout.PropertyField(serializedObject.FindProperty("logOnStart"));
 
-            // Refresh button
+            // Refresh buttons
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Refresh Components"))
+            {
+                RefreshComponentList();
+            }
             if (GUILayout.Button("Refresh Variables"))
             {
                 RefreshVariableList();
             }
+            EditorGUILayout.EndHorizontal();
 
             // Log button
             if (GUILayout.Button("Log Selected Variables"))
@@ -74,8 +102,22 @@ namespace UnityLogger
                 // Draw groups
                 foreach (var group in variableGroups)
                 {
-                    group.IsExpanded = EditorGUILayout.Foldout(group.IsExpanded, group.Name);
-                    if (group.IsExpanded)
+                    // Get or initialize group expand state
+                    if (!groupExpandStates.ContainsKey(group.Name))
+                    {
+                        groupExpandStates[group.Name] = !group.IsDefaultCollapsed;
+                    }
+
+                    // Draw group foldout
+                    bool newExpandState = EditorGUILayout.Foldout(groupExpandStates[group.Name], 
+                        $"{group.Name} ({group.Variables.Count})");
+                    
+                    if (newExpandState != groupExpandStates[group.Name])
+                    {
+                        groupExpandStates[group.Name] = newExpandState;
+                    }
+
+                    if (groupExpandStates[group.Name])
                     {
                         EditorGUI.indentLevel++;
                         
@@ -122,6 +164,24 @@ namespace UnityLogger
             if (EditorGUI.EndChangeCheck())
             {
                 serializedObject.ApplyModifiedProperties();
+            }
+        }
+
+        private void RefreshComponentList()
+        {
+            var currentTarget = serializedObject.FindProperty("targetComponent").objectReferenceValue as Component;
+            if (currentTarget != null)
+            {
+                availableComponents = logger.GetAvailableComponents();
+                componentNames = availableComponents.Select(c => $"{c.GetType().Name}").ToArray();
+                selectedComponentIndex = System.Array.IndexOf(availableComponents, currentTarget);
+                if (selectedComponentIndex < 0) selectedComponentIndex = 0;
+            }
+            else
+            {
+                availableComponents = null;
+                componentNames = null;
+                selectedComponentIndex = 0;
             }
         }
 

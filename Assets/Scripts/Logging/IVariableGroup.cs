@@ -11,12 +11,14 @@ namespace UnityLogger
         public string Name { get; set; }
         public List<string> Variables { get; set; }
         public bool IsExpanded { get; set; }
+        public bool IsDefaultCollapsed { get; set; }
 
-        public VariableGroup(string name)
+        public VariableGroup(string name, bool defaultCollapsed = false)
         {
             Name = name;
             Variables = new List<string>();
-            IsExpanded = true;
+            IsExpanded = !defaultCollapsed;
+            IsDefaultCollapsed = defaultCollapsed;
         }
     }
 
