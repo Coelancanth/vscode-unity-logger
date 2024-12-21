@@ -20,13 +20,16 @@ namespace UnityLogger
 
         private IVariableCapture variableCapture;
         private ILogger logger;
+        private IVariableGroup variableGroup;
         private Dictionary<string, object> capturedValues;
+        private List<VariableGroup> groups = new List<VariableGroup>();
 
         private void Awake()
         {
             // Initialize with default implementations
             variableCapture = new ReflectionVariableCapture();
             logger = new UnityDebugLogger();
+            variableGroup = new DefaultVariableGroup();
         }
 
         private void Start()
@@ -38,12 +41,15 @@ namespace UnityLogger
         }
 
         /// <summary>
-        /// Captures all available variables from the target component
+        /// Captures and groups all available variables from the target component
         /// </summary>
-        public List<string> CaptureAvailableVariables()
+        public List<VariableGroup> CaptureAvailableVariables()
         {
-            if (targetComponent == null) return new List<string>();
-            return variableCapture.GetAvailableVariables(targetComponent);
+            if (targetComponent == null) return new List<VariableGroup>();
+            
+            var variables = variableCapture.GetAvailableVariables(targetComponent);
+            groups = variableGroup.GroupVariables(variables, targetComponent.GetType());
+            return groups;
         }
 
         /// <summary>
@@ -74,6 +80,10 @@ namespace UnityLogger
         public void SetTargetComponent(Component component)
         {
             targetComponent = component;
+            if (component != null)
+            {
+                CaptureAvailableVariables();
+            }
         }
 
         /// <summary>
@@ -90,6 +100,22 @@ namespace UnityLogger
         public void SetLogger(ILogger customLogger)
         {
             logger = customLogger ?? new UnityDebugLogger();
+        }
+
+        /// <summary>
+        /// Sets a custom variable group implementation
+        /// </summary>
+        public void SetVariableGroup(IVariableGroup group)
+        {
+            variableGroup = group ?? new DefaultVariableGroup();
+        }
+
+        /// <summary>
+        /// Gets the current variable groups
+        /// </summary>
+        public List<VariableGroup> GetVariableGroups()
+        {
+            return groups;
         }
     }
 } 

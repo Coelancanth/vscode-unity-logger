@@ -9,7 +9,7 @@ namespace UnityLogger
     public class LoggerEditor : Editor
     {
         private Logger logger;
-        private List<string> availableVariables = new List<string>();
+        private List<VariableGroup> variableGroups = new List<VariableGroup>();
         private Dictionary<string, bool> variableSelections = new Dictionary<string, bool>();
         private bool showVariables = true;
 
@@ -49,32 +49,70 @@ namespace UnityLogger
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Select All"))
                 {
-                    foreach (var variable in availableVariables)
+                    foreach (var group in variableGroups)
                     {
-                        variableSelections[variable] = true;
+                        foreach (var variable in group.Variables)
+                        {
+                            variableSelections[variable] = true;
+                        }
                     }
                     UpdateSelectedVariables();
                 }
                 if (GUILayout.Button("Deselect All"))
                 {
-                    foreach (var variable in availableVariables)
+                    foreach (var group in variableGroups)
                     {
-                        variableSelections[variable] = false;
+                        foreach (var variable in group.Variables)
+                        {
+                            variableSelections[variable] = false;
+                        }
                     }
                     UpdateSelectedVariables();
                 }
                 EditorGUILayout.EndHorizontal();
 
-                // Variable toggles
-                foreach (var variable in availableVariables)
+                // Draw groups
+                foreach (var group in variableGroups)
                 {
-                    bool isSelected = variableSelections.ContainsKey(variable) && variableSelections[variable];
-                    bool newValue = EditorGUILayout.Toggle(variable, isSelected);
-                    
-                    if (newValue != isSelected)
+                    group.IsExpanded = EditorGUILayout.Foldout(group.IsExpanded, group.Name);
+                    if (group.IsExpanded)
                     {
-                        variableSelections[variable] = newValue;
-                        UpdateSelectedVariables();
+                        EditorGUI.indentLevel++;
+                        
+                        // Group select/deselect buttons
+                        EditorGUILayout.BeginHorizontal();
+                        if (GUILayout.Button("Select Group"))
+                        {
+                            foreach (var variable in group.Variables)
+                            {
+                                variableSelections[variable] = true;
+                            }
+                            UpdateSelectedVariables();
+                        }
+                        if (GUILayout.Button("Deselect Group"))
+                        {
+                            foreach (var variable in group.Variables)
+                            {
+                                variableSelections[variable] = false;
+                            }
+                            UpdateSelectedVariables();
+                        }
+                        EditorGUILayout.EndHorizontal();
+
+                        // Variable toggles within group
+                        foreach (var variable in group.Variables)
+                        {
+                            bool isSelected = variableSelections.ContainsKey(variable) && variableSelections[variable];
+                            bool newValue = EditorGUILayout.Toggle(variable, isSelected);
+                            
+                            if (newValue != isSelected)
+                            {
+                                variableSelections[variable] = newValue;
+                                UpdateSelectedVariables();
+                            }
+                        }
+                        
+                        EditorGUI.indentLevel--;
                     }
                 }
                 
@@ -89,13 +127,16 @@ namespace UnityLogger
 
         private void RefreshVariableList()
         {
-            availableVariables = logger.CaptureAvailableVariables();
+            variableGroups = logger.CaptureAvailableVariables();
             
             // Preserve existing selections
             var newSelections = new Dictionary<string, bool>();
-            foreach (var variable in availableVariables)
+            foreach (var group in variableGroups)
             {
-                newSelections[variable] = variableSelections.ContainsKey(variable) && variableSelections[variable];
+                foreach (var variable in group.Variables)
+                {
+                    newSelections[variable] = variableSelections.ContainsKey(variable) && variableSelections[variable];
+                }
             }
             variableSelections = newSelections;
         }

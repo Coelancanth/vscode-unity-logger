@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 
 namespace UnityLogger
 {
@@ -22,9 +23,18 @@ namespace UnityLogger
             var builder = new StringBuilder();
             builder.AppendLine("=== Variable Log ===");
 
-            foreach (var kvp in values)
+            // Group values by their type for better organization
+            var groupedValues = values
+                .GroupBy(kv => DetermineValueType(kv.Value))
+                .OrderBy(g => g.Key);
+
+            foreach (var group in groupedValues)
             {
-                builder.AppendLine(string.Format(format, kvp.Key, kvp.Value?.ToString() ?? "null"));
+                builder.AppendLine($"\n--- {group.Key} ---");
+                foreach (var kvp in group.OrderBy(kv => kv.Key))
+                {
+                    builder.AppendLine(string.Format(format, kvp.Key, FormatValue(kvp.Value)));
+                }
             }
 
             Debug.Log(builder.ToString());
@@ -33,6 +43,24 @@ namespace UnityLogger
         public void SetFormat(string format)
         {
             this.format = string.IsNullOrEmpty(format) ? "[{0}] = {1}" : format;
+        }
+
+        private string DetermineValueType(object value)
+        {
+            if (value == null) return "Null Values";
+            if (value is Component) return "Components";
+            if (value is GameObject) return "GameObjects";
+            if (value is UnityEngine.Object) return "Unity Objects";
+            if (value.GetType().IsValueType) return "Value Types";
+            return "Reference Types";
+        }
+
+        private string FormatValue(object value)
+        {
+            if (value == null) return "null";
+            if (value is Component comp) return $"{comp.GetType().Name} (in {comp.gameObject.name})";
+            if (value is GameObject go) return go.name;
+            return value.ToString();
         }
     }
 } 
